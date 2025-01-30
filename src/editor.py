@@ -1,7 +1,7 @@
 import json
 import re
 import urllib
-from typing import Callable, cast
+from typing import Any, Callable, cast
 
 from anki.hooks import wrap
 from aqt import gui_hooks
@@ -78,12 +78,24 @@ def fname_to_link(self: Editor, fname: str, _old: Callable) -> str:
     if not appendix_mode_enabled:
         return _old(self, fname)
     ext = fname.split(".")[-1].lower()
-    if ext not in pics:
+    if ext not in pics and ext != "pdf":
         return _old(self, fname)
     name = urllib.parse.quote(fname.encode("utf8"))
     return f'<a href="{name}">Appendix {get_next_appendix_number(self)}</a>'
 
 
+def url_to_link(*args: Any, **kwargs: Any) -> str:
+    self: Editor = args[0]
+    url: str = args[1]
+    _old: Callable = kwargs.pop("_old")
+
+    if appendix_mode_enabled and url.lower().endswith(".pdf"):
+        return self.fnameToLink(self._retrieveURL(url))
+    else:
+        return _old(*args, **kwargs)
+
+
 def init_hooks() -> None:
     gui_hooks.editor_did_init_buttons.append(on_editor_did_init_buttons)
     Editor.fnameToLink = wrap(Editor.fnameToLink, fname_to_link, "around")  # type: ignore
+    Editor.urlToLink = wrap(Editor.urlToLink, url_to_link, "around")  # type: ignore
