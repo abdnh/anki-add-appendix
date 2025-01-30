@@ -1,0 +1,2 @@
+-   `report_errors`: Report add-on errors automatically.
+-   `appendix_mode_shortcut`: Editor shortcut for toggling appendix mode.

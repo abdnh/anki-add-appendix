@@ -1,0 +1,8 @@
+{
+    "properties": {
+        "report_errors": {
+            "type": "boolean"
+        }
+    },
+    "type": "object"
+}
