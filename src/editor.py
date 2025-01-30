@@ -39,12 +39,14 @@ def on_toggle_appendix_mode(editor: Editor) -> None:
 
 def on_editor_did_init_buttons(buttons: list[str], editor: Editor) -> None:
     label_style = 'style="color: red"' if appendix_mode_enabled else ""
-
+    tip = "Toggle Appendix Mode"
+    if config["appendix_mode_shortcut"]:
+        tip += f" ({config['appendix_mode_shortcut']})"
     button = editor.addButton(
         icon=None,
         cmd="appendix_mode",
         func=on_toggle_appendix_mode,
-        tip="Toggle Appendix Mode",
+        tip=tip,
         label=f"<span {label_style}>A</span>",
         id="toggle_appendix",
         keys=config["appendix_mode_shortcut"],
