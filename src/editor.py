@@ -83,7 +83,7 @@ def fname_to_link(self: Editor, fname: str, _old: Callable) -> str:
     if ext not in pics and ext != "pdf":
         return _old(self, fname)
     name = urllib.parse.quote(fname.encode("utf8"))
-    return f'<a href="{name}">🔗Appendix {get_next_appendix_number(self)}</a>'
+    return f'<a href="{name}" class="appendix-link">🔗Appendix {get_next_appendix_number(self)}</a>'
 
 
 def url_to_link(*args: Any, **kwargs: Any) -> str:
