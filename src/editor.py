@@ -54,7 +54,7 @@ def on_editor_did_init_buttons(buttons: list[str], editor: Editor) -> None:
     buttons.append(button)
 
 
-APPENDIX_TEXT_RE = re.compile(r"Appendix (\d+)")
+APPENDIX_TEXT_RE = re.compile(r"🔗Appendix (\d+)")
 
 
 def get_next_appendix_number(editor: Editor) -> int:
