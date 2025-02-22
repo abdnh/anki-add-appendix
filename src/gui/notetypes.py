@@ -4,6 +4,8 @@ import functools
 import hashlib
 import re
 from dataclasses import dataclass
+from pathlib import Path
+from typing import Generator
 
 from anki.collection import Collection, OpChanges
 from anki.media import media_paths_from_col_path
@@ -39,28 +41,91 @@ class AppendixFiles:
 
 
 LIGHTBOX_CSS_IMAGE_REF_RE = re.compile(r"url\(\.\./images/([^.]*?\..*?)\)")
+PDFJS_BUILD_JS_REF_RE = re.compile(r"\.\./build/((.*?).mjs)")
+PDFJS_CSS_IMAGE_REF_RE = re.compile(r"url\(images/([^.]*?\..*?)\)")
+
+
+def replace_lightbox_css_image_ref(
+    match: re.Match[str], mapping: dict[str, str]
+) -> str:
+    return f"url({mapping[match.group(1)]})"
+
+
+def replace_pdfjs_build_js_ref(match: re.Match[str], mapping: dict[str, str]) -> str:
+    return mapping[match.group(1)]
+
+
+def replace_pdfjs_css_image_ref(match: re.Match[str], mapping: dict[str, str]) -> str:
+    return f"url({mapping[match.group(1)]})"
+
+
+def underscored_name(path: Path) -> str:
+    return path.with_stem(f"_{path.stem}").name
 
 
 def add_vendored_libs_to_media_dir(col: Collection) -> dict[str, str]:
-    def replace_css_image_ref(match: re.Match[str], mapping: dict[str, str]) -> str:
-        return f"url({mapping[match.group(1)]})"
-
     mapping: dict[str, str] = {}
-    dirs = (
-        consts.dir / "web" / "vendor" / "lightbox2" / "images",
-        consts.dir / "web" / "vendor" / "lightbox2" / "css",
-        consts.dir / "web" / "vendor" / "lightbox2" / "js",
+
+    def g(path: Path, pattern: str = "*") -> Generator[Path]:
+        return path.rglob(pattern)
+
+    patterns = (
+        g(consts.dir / "web" / "vendor" / "lightbox2" / "images"),
+        g(consts.dir / "web" / "vendor" / "lightbox2" / "css"),
+        g(consts.dir / "web" / "vendor" / "lightbox2" / "js"),
+        g(consts.dir / "web" / "vendor" / "pdfjs" / "build"),
+        g(consts.dir / "web" / "vendor" / "pdfjs" / "web" / "images"),
+        g(consts.dir / "web" / "vendor" / "pdfjs" / "web", "*.mjs"),
+        g(consts.dir / "web" / "vendor" / "pdfjs" / "web", "*.css"),
+        g(consts.dir / "web" / "vendor" / "pdfjs" / "web"),
     )
-    for dir_path in dirs:
-        for path in dir_path.iterdir():
+
+    for paths in patterns:
+        for path in paths:
+            if not path.is_file():
+                continue
+            renamed_filename: str | None = None
             if path.name == "lightbox.min.css":
                 css = path.read_text(encoding="utf-8")
                 css = LIGHTBOX_CSS_IMAGE_REF_RE.sub(
-                    functools.partial(replace_css_image_ref, mapping=mapping), css
+                    functools.partial(replace_lightbox_css_image_ref, mapping=mapping),
+                    css,
                 )
-                renamed_filename = col.media.write_data(path.name, css.encode())
-            else:
-                renamed_filename = col.media.add_file(str(path))
+                renamed_filename = col.media.write_data(
+                    underscored_name(path), css.encode()
+                )
+            if path.name == "viewer.mjs":
+                js = path.read_text(encoding="utf-8")
+                js = js.replace("./images/", "./")
+                js = PDFJS_BUILD_JS_REF_RE.sub(
+                    functools.partial(replace_pdfjs_build_js_ref, mapping=mapping), js
+                )
+                renamed_filename = col.media.write_data(
+                    underscored_name(path), js.encode()
+                )
+            if path.name == "viewer.html":
+                html = path.read_text(encoding="utf-8")
+                html = PDFJS_BUILD_JS_REF_RE.sub(
+                    functools.partial(replace_pdfjs_build_js_ref, mapping=mapping), html
+                )
+                html = html.replace("viewer.mjs", mapping["viewer.mjs"])
+                html = html.replace("viewer.css", mapping["viewer.css"])
+                renamed_filename = col.media.write_data(
+                    underscored_name(path), html.encode()
+                )
+            if path.name == "viewer.css":
+                css = path.read_text(encoding="utf-8")
+                css = PDFJS_CSS_IMAGE_REF_RE.sub(
+                    functools.partial(replace_pdfjs_css_image_ref, mapping=mapping),
+                    css,
+                )
+                renamed_filename = col.media.write_data(
+                    underscored_name(path), css.encode()
+                )
+            if not renamed_filename:
+                renamed_filename = col.media.write_data(
+                    underscored_name(path), path.read_bytes()
+                )
             mapping[path.name] = renamed_filename
 
     return mapping
@@ -74,6 +139,9 @@ def build_assets(col: Collection) -> AppendixFiles:
     script_contents = script_contents.replace(
         b"lightbox-plus-jquery.min.js",
         vendor_assets["lightbox-plus-jquery.min.js"].encode(),
+    )
+    script_contents = script_contents.replace(
+        b"viewer.html", vendor_assets["viewer.html"].encode()
     )
     hasher = hashlib.sha1(script_contents)
     (media_dir, _) = media_paths_from_col_path(col.path)
