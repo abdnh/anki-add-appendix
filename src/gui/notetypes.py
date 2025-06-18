@@ -1,11 +1,7 @@
 from __future__ import annotations
 
-import functools
 import hashlib
 import re
-from dataclasses import dataclass
-from pathlib import Path
-from typing import Generator
 
 from anki.collection import Collection, OpChanges
 from anki.media import media_paths_from_col_path
@@ -20,151 +16,29 @@ from ..consts import consts
 from ..forms.notetypes import Ui_Dialog
 from .dialog import Dialog
 
-SCRIPT_FILENAME = "_appendix-{hash}.js"
+SCRIPT_FILENAME = "_appendix-viewer-{hash}.js"
 SCRIPT_HTML_RE = re.compile(
     r"""<script\s+src=("|')_appendix-(.*?).js("|')></script>""",
     re.DOTALL | re.IGNORECASE,
 )
 SCRIPT_HTML = '<script src="{script_filename}"></script>'
-CSS_FILENAME = "_appendix-{hash}.css"
-CSS_IMPORT = '@import url("{css_filename}");'
-CSS_IMPORT_RE = re.compile(
-    r"""@import url\(("|')_appendix-(.*?).css("|')\);""",
-    re.DOTALL | re.IGNORECASE,
-)
 
 
-@dataclass
-class AppendixFiles:
-    script_filename: str
-    css_filename: str
-
-
-LIGHTBOX_CSS_IMAGE_REF_RE = re.compile(r"url\(\.\./images/([^.]*?\..*?)\)")
-PDFJS_BUILD_JS_REF_RE = re.compile(r"\.\./build/((.*?).mjs)")
-PDFJS_CSS_IMAGE_REF_RE = re.compile(r"url\(images/([^.]*?\..*?)\)")
-
-
-def replace_lightbox_css_image_ref(
-    match: re.Match[str], mapping: dict[str, str]
-) -> str:
-    return f"url({mapping[match.group(1)]})"
-
-
-def replace_pdfjs_build_js_ref(match: re.Match[str], mapping: dict[str, str]) -> str:
-    return mapping[match.group(1)]
-
-
-def replace_pdfjs_css_image_ref(match: re.Match[str], mapping: dict[str, str]) -> str:
-    return f"url({mapping[match.group(1)]})"
-
-
-def underscored_name(path: Path) -> str:
-    return path.with_stem(f"_{path.stem}").name
-
-
-def add_vendored_libs_to_media_dir(col: Collection) -> dict[str, str]:
-    mapping: dict[str, str] = {}
-
-    def g(path: Path, pattern: str = "*") -> Generator[Path]:
-        return path.rglob(pattern)
-
-    patterns = (
-        g(consts.dir / "web" / "vendor" / "lightbox2" / "images"),
-        g(consts.dir / "web" / "vendor" / "lightbox2" / "css"),
-        g(consts.dir / "web" / "vendor" / "lightbox2" / "js"),
-        g(consts.dir / "web" / "vendor" / "pdfjs" / "build"),
-        g(consts.dir / "web" / "vendor" / "pdfjs" / "web" / "images"),
-        g(consts.dir / "web" / "vendor" / "pdfjs" / "web", "*.mjs"),
-        g(consts.dir / "web" / "vendor" / "pdfjs" / "web", "*.css"),
-        g(consts.dir / "web" / "vendor" / "pdfjs" / "web"),
-    )
-
-    for paths in patterns:
-        for path in paths:
-            if not path.is_file():
-                continue
-            renamed_filename: str | None = None
-            if path.name == "lightbox.min.css":
-                css = path.read_text(encoding="utf-8")
-                css = LIGHTBOX_CSS_IMAGE_REF_RE.sub(
-                    functools.partial(replace_lightbox_css_image_ref, mapping=mapping),
-                    css,
-                )
-                renamed_filename = col.media.write_data(
-                    underscored_name(path), css.encode()
-                )
-            if path.name == "viewer.mjs":
-                js = path.read_text(encoding="utf-8")
-                js = js.replace("./images/", "./")
-                js = PDFJS_BUILD_JS_REF_RE.sub(
-                    functools.partial(replace_pdfjs_build_js_ref, mapping=mapping), js
-                )
-                renamed_filename = col.media.write_data(
-                    underscored_name(path), js.encode()
-                )
-            if path.name == "viewer.html":
-                html = path.read_text(encoding="utf-8")
-                html = PDFJS_BUILD_JS_REF_RE.sub(
-                    functools.partial(replace_pdfjs_build_js_ref, mapping=mapping), html
-                )
-                html = html.replace("viewer.mjs", mapping["viewer.mjs"])
-                html = html.replace("viewer.css", mapping["viewer.css"])
-                renamed_filename = col.media.write_data(
-                    underscored_name(path), html.encode()
-                )
-            if path.name == "viewer.css":
-                css = path.read_text(encoding="utf-8")
-                css = PDFJS_CSS_IMAGE_REF_RE.sub(
-                    functools.partial(replace_pdfjs_css_image_ref, mapping=mapping),
-                    css,
-                )
-                renamed_filename = col.media.write_data(
-                    underscored_name(path), css.encode()
-                )
-            if not renamed_filename:
-                renamed_filename = col.media.write_data(
-                    underscored_name(path), path.read_bytes()
-                )
-            mapping[path.name] = renamed_filename
-
-    return mapping
-
-
-def build_assets(col: Collection) -> AppendixFiles:
-    script_path = consts.dir / "assets" / "_appendix.js"
-    css_path = consts.dir / "assets" / "_appendix.css"
-    vendor_assets = add_vendored_libs_to_media_dir(col)
+def build_script(col: Collection) -> str:
+    script_path = consts.dir / "web" / "dist" / "_appendix-viewer.js"
     script_contents = script_path.read_bytes()
-    script_contents = script_contents.replace(
-        b"lightbox-plus-jquery.min.js",
-        vendor_assets["lightbox-plus-jquery.min.js"].encode(),
-    )
-    script_contents = script_contents.replace(
-        b"viewer.html", vendor_assets["viewer.html"].encode()
-    )
     hasher = hashlib.sha1(script_contents)
     (media_dir, _) = media_paths_from_col_path(col.path)
     script_filename = SCRIPT_FILENAME.format(hash=hasher.hexdigest())
     with open(os.path.join(media_dir, script_filename), "wb") as f:
         f.write(script_contents)
-    css_contents = css_path.read_bytes()
-    css_contents = css_contents.replace(
-        b"lightbox.min.css", vendor_assets["lightbox.min.css"].encode()
-    )
-    hasher = hashlib.sha1(css_contents)
-    css_filename = CSS_FILENAME.format(hash=hasher.hexdigest())
-    with open(os.path.join(media_dir, css_filename), "wb") as f:
-        f.write(css_contents)
 
-    return AppendixFiles(script_filename=script_filename, css_filename=css_filename)
+    return script_filename
 
 
 def notetype_has_assets(notetype: NotetypeDict) -> Qt.CheckState:
     templates = notetype["tmpls"]
     has_script = 0
-    if CSS_IMPORT_RE.search(notetype["css"]):
-        has_script += len(templates)
     for template in templates:
         for side in ["qfmt", "afmt"]:
             html: str = template[side]
@@ -172,7 +46,7 @@ def notetype_has_assets(notetype: NotetypeDict) -> Qt.CheckState:
                 has_script += 1
 
     value: Qt.CheckState
-    if has_script == 3 * len(templates):
+    if has_script == 2 * len(templates):
         value = Qt.CheckState.Checked
     elif has_script == 0:
         value = Qt.CheckState.Unchecked
@@ -191,27 +65,19 @@ def get_notetypes_have_assets() -> dict[str, Qt.CheckState]:
 
 def add_assets_to_notetype(
     notetype: NotetypeDict,
-    filenames: AppendixFiles,
+    script_filename: str,
 ) -> None:
     templates = notetype["tmpls"]
     for template in templates:
         for side in ["qfmt", "afmt"]:
             html: str = template[side]
-            script_html = SCRIPT_HTML.format(script_filename=filenames.script_filename)
+            script_html = SCRIPT_HTML.format(script_filename=script_filename)
             if SCRIPT_HTML_RE.search(html):
                 html = SCRIPT_HTML_RE.sub(script_html, html)
             else:
                 # FIXME: excessive newlines after frequent updates
                 html += f"\n\n{script_html}"
             template[side] = html
-
-        css = notetype["css"]
-        css_import = CSS_IMPORT.format(css_filename=filenames.css_filename)
-        if CSS_IMPORT_RE.search(css):
-            css = CSS_IMPORT_RE.sub(css_import, css)
-        else:
-            css = f"{css_import}\n\n{css}"
-        notetype["css"] = css
 
 
 def remove_assets_from_notetype(notetype: NotetypeDict) -> bool:
@@ -222,9 +88,6 @@ def remove_assets_from_notetype(notetype: NotetypeDict) -> bool:
             if SCRIPT_HTML_RE.search(template[side]):
                 template[side] = SCRIPT_HTML_RE.sub("", template[side])
                 changed = True
-    if CSS_IMPORT_RE.search(notetype["css"]):
-        notetype["css"] = CSS_IMPORT_RE.sub("", notetype["css"])
-        changed = True
 
     return changed
 
@@ -275,13 +138,13 @@ class NotetypesDialog(Dialog):
             )
 
         def op(col: Collection) -> OpChanges:
-            filenames = build_assets(col)
+            script_filename = build_script(col)
             updated_notetypes: list[NotetypeDict] = []
             for name, checked in notetype_names_states:
                 notetype = col.models.by_name(name)
                 changed = False
                 if checked:
-                    add_assets_to_notetype(notetype, filenames)
+                    add_assets_to_notetype(notetype, script_filename)
                     changed = True
                 else:
                     changed = remove_assets_from_notetype(notetype)

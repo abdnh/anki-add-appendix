@@ -6,7 +6,7 @@ from aqt.qt import *
 
 sys.path.append(os.path.join(os.path.dirname(__file__), "vendor"))
 
-from . import editor
+from . import editor, web
 from .consts import consts
 from .errors import setup_error_handler
 from .gui.notetypes import NotetypesDialog
@@ -27,4 +27,5 @@ def add_menu() -> None:
 
 setup_error_handler()
 editor.init_hooks()
+web.init_hooks()
 add_menu()
