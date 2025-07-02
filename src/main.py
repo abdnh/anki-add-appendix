@@ -1,10 +1,5 @@
-import os
-import sys
-
 from aqt import mw
-from aqt.qt import *
-
-sys.path.append(os.path.join(os.path.dirname(__file__), "vendor"))
+from aqt.qt import QAction, QMenu, qconnect
 
 from . import editor, web
 from .consts import consts
@@ -25,7 +20,8 @@ def add_menu() -> None:
     qconnect(notetypes_action.triggered, open_notetypes_dialog)
 
 
-setup_error_handler()
-editor.init_hooks()
-web.init_hooks()
-add_menu()
+def init() -> None:
+    setup_error_handler()
+    editor.init_hooks()
+    web.init_hooks()
+    add_menu()

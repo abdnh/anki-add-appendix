@@ -1,12 +1,15 @@
 from __future__ import annotations
 
+import atexit
+import logging
+
 from anki.hooks import wrap
 from aqt import gui_hooks, mw
-from aqt.qt import *
 
 from .config import config
 from .consts import consts
 from .log import logger
+from .vendor.ankiutils import errors
 
 REGISTERED_ERROR_HANDLER = False
 
@@ -15,20 +18,13 @@ def _on_profile_did_open() -> None:
     global REGISTERED_ERROR_HANDLER
 
     if not REGISTERED_ERROR_HANDLER:
-        try:
-            import ankiutils.errors
-
-            ankiutils.errors.setup_error_handler(consts, config, logger)
-            REGISTERED_ERROR_HANDLER = True
-        except ImportError:
-            logger.warning("ankiutils.errors not found; error handling is disabled.")
+        errors.setup_error_handler(consts, config, logger)
+        REGISTERED_ERROR_HANDLER = True
 
 
 def _before_exit() -> None:
-    import atexit
-    import logging
-
-    # Fix 'RuntimeError: wrapped C/C++ object of type ErrorHandler has been deleted' on shutdown
+    # Fix 'RuntimeError: wrapped C/C++ object of type ErrorHandler has been deleted'
+    # on shutdown
     atexit.unregister(logging.shutdown)
     logging.shutdown()
 
@@ -39,13 +35,5 @@ def setup_error_handler() -> None:
 
 
 def report_exception_and_upload_logs(exception: BaseException) -> str | None:
-    try:
-        import ankiutils.errors
-
-        return ankiutils.errors.report_exception_and_upload_logs(
-            exception, consts, config, logger
-        )
-    except ImportError:
-        logger.warning("ankiutils.errors not found; error handling is disabled.")
-
-    return None
+    return errors.report_exception_and_upload_logs(exception, consts, config, logger)
+    return errors.report_exception_and_upload_logs(exception, consts, config, logger)

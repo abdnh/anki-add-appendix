@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import os
 import re
 
 from anki.collection import Collection, OpChanges
@@ -8,8 +9,7 @@ from anki.media import media_paths_from_col_path
 from anki.models import NotetypeDict
 from aqt import mw
 from aqt.operations import CollectionOp
-from aqt.qt import *
-from aqt.qt import Qt
+from aqt.qt import QListWidget, QListWidgetItem, Qt, qconnect
 from aqt.utils import tooltip
 
 from ..consts import consts
@@ -154,7 +154,8 @@ class NotetypesDialog(Dialog):
             undo_entry = col.add_custom_undo_entry("Appendix: Update Notetypes")
             for notetype in updated_notetypes:
                 col.models.update_dict(notetype)
-                # Merge to our custom undo entry before the undo queue fills up and Anki discards our entry
+                # Merge to our custom undo entry before
+                # the undo queue fills up and Anki discards our entry
                 if (col.undo_status().last_step - undo_entry) % 29 == 0:
                     col.merge_undo_entries(undo_entry)
             changes = col.merge_undo_entries(undo_entry)
@@ -164,4 +165,5 @@ class NotetypesDialog(Dialog):
         def on_success(changes: OpChanges) -> None:
             tooltip("Notetypes updated")
 
+        CollectionOp(parent=self, op=op).success(on_success).run_in_background()
         CollectionOp(parent=self, op=op).success(on_success).run_in_background()

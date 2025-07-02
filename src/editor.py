@@ -1,13 +1,12 @@
 import json
 import re
 import urllib
-from typing import Any, Callable, cast
+from typing import Any, Callable
 
 from anki.hooks import wrap
 from aqt import gui_hooks
 from aqt.editor import Editor, pics
 from bs4 import BeautifulSoup
-from bs4.element import PageElement
 
 from .config import config
 
@@ -17,17 +16,16 @@ appendix_mode_enabled = False
 def update_appendix_mode_button_style(editor: Editor) -> None:
     editor.web.eval(
         """
-(() => {
+(() => {{
     const button = document.getElementById("toggle_appendix");
     const span = button.children[0];
-    if(%(appendix_mode_enabled)s) {
+    if({appendix_mode_enabled}) {{
         span.style.color = 'red';
-    } else {
+    }} else {{
         span.style.removeProperty('color');
-    }
-})();
-"""
-        % dict(appendix_mode_enabled=json.dumps(appendix_mode_enabled))
+    }}
+}})();
+""".format(**dict(appendix_mode_enabled=json.dumps(appendix_mode_enabled)))
     )
 
 
@@ -63,11 +61,10 @@ def get_next_appendix_number(editor: Editor) -> int:
     for field in note.fields:
         soup = BeautifulSoup(field, "html.parser")
         for s in soup.find_all(string=APPENDIX_TEXT_RE):
-            s = cast(PageElement, s)
             if not s.parent or s.parent.name != "a":
                 continue
 
-            match = APPENDIX_TEXT_RE.match(s)
+            match = APPENDIX_TEXT_RE.match(str(s))
             if match:
                 number = int(match.group(1))
                 if number >= max_number:
@@ -83,7 +80,11 @@ def fname_to_link(self: Editor, fname: str, _old: Callable) -> str:
     if ext not in pics and ext != "pdf":
         return _old(self, fname)
     name = urllib.parse.quote(fname.encode("utf8"))
-    return f'<a href="{name}" class="appendix-link">🔗Appendix {get_next_appendix_number(self)}<img src="{name}" style="display: none;"></a>'
+    return (
+        f'<a href="{name}" class="appendix-link">'
+        f"🔗Appendix {get_next_appendix_number(self)}"
+        f'<img src="{name}" style="display: none;"></a>'
+    )
 
 
 def url_to_link(*args: Any, **kwargs: Any) -> str:
