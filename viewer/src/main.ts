@@ -18,7 +18,8 @@ document.querySelectorAll<HTMLAnchorElement>(".appendix-link").forEach((el) => {
     if (el.classList.contains("processed")) {
         return;
     }
-    if (el.href.endsWith(".pdf")) {
+    const url = new URL(el.href);
+    if (url.pathname.endsWith(".pdf")) {
         el.addEventListener("click", (e) => {
             e.preventDefault();
             const overlay = document.getElementById(pdfOverlayId);
