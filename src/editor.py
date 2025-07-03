@@ -9,6 +9,7 @@ from aqt.editor import Editor, pics
 from bs4 import BeautifulSoup
 
 from .config import config
+from .gui.pdf_selector import PdfSelectorDialog
 
 appendix_mode_enabled = False
 
@@ -35,7 +36,25 @@ def on_toggle_appendix_mode(editor: Editor) -> None:
     update_appendix_mode_button_style(editor)
 
 
+def on_pdf_selector(editor: Editor) -> None:
+    """Open PDF selector dialog."""
+    dialog = PdfSelectorDialog(editor=editor, parent=editor.parentWindow)
+    dialog.exec()
+
+
 def on_editor_did_init_buttons(buttons: list[str], editor: Editor) -> None:
+    # PDF Selector button
+    pdf_selector_button = editor.addButton(
+        icon=None,
+        cmd="pdf_selector",
+        func=on_pdf_selector,
+        tip="PDF Selector",
+        label="<span>📄</span>",
+        id="pdf_selector",
+    )
+    buttons.append(pdf_selector_button)
+
+    # Appendix mode toggle button
     label_style = 'style="color: red"' if appendix_mode_enabled else ""
     tip = "Toggle Appendix Mode"
     if config["appendix_mode_shortcut"]:
