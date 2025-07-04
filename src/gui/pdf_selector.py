@@ -283,7 +283,7 @@ class PdfSelectorDialog(Dialog):
         )
 
         self.editor.web.eval(
-            f"document.execCommand('insertHTML', false, {json.loads(appendix_html)});"
+            f"document.execCommand('insertHTML', false, {json.dumps(appendix_html)});"
         )
 
         self.accept()
