@@ -30,4 +30,3 @@ def init() -> None:
     editor.init_hooks()
     web.init_hooks()
     add_menu()
-    add_menu()
