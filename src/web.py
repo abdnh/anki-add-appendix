@@ -27,5 +27,3 @@ def on_webview_will_set_content(
 
 def init_hooks() -> None:
     gui_hooks.webview_will_set_content.append(on_webview_will_set_content)
-    gui_hooks.webview_will_set_content.append(on_webview_will_set_content)
-    gui_hooks.webview_will_set_content.append(on_webview_will_set_content)
