@@ -9,7 +9,8 @@
         "preview": "vite preview"
     },
     "dependencies": {
-        "lightbox2": "^2.11.5"
+        "lightbox2": "^2.11.5",
+        "pdfjs-dist": "^3.11.174"
     },
     "devDependencies": {
         "typescript": "~5.7.2",

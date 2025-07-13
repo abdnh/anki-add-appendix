@@ -1,19 +1,374 @@
-/* Credit: https://www.w3schools.com/HOWTO/howto_css_overlay.asp */
-#appendix-pdf-overlay {
+/* PDF Viewer Overlay */
+.pdf-overlay {
     position: fixed;
-    display: none;
-    width: 100%;
-    height: 100%;
     top: 0;
     left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: rgba(0, 0, 0, 0.5);
-    z-index: 2;
-    cursor: pointer;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.9);
+    z-index: 9999;
+    display: none;
+    justify-content: center;
+    align-items: center;
+    touch-action: none;
 }
 
-#appendix-pdf-overlay iframe {
-    width: 95%;
-    height: 100%;
+.pdf-overlay.active {
+    display: flex;
+}
+
+/* PDF Container */
+.pdf-container {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
+    padding: 0;
+    margin: 0;
+}
+
+/* PDF Canvas */
+.pdf-canvas {
+    max-width: 100vw;
+    max-height: 100vh;
+    width: auto;
+    height: auto;
+    border: none;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+    background-color: white;
+    touch-action: none;
+    cursor: grab;
+}
+
+.pdf-canvas:active {
+    cursor: grabbing;
+}
+
+.pdf-canvas.hidden {
+    display: none;
+}
+
+/* PDF Controls */
+.pdf-controls {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background-color: rgba(0, 0, 0, 0.8);
+    padding: 12px 16px;
+    border-radius: 24px;
+    backdrop-filter: blur(10px);
+    z-index: 10000;
+}
+
+/* PDF Control Buttons */
+.pdf-btn {
+    background-color: rgba(255, 255, 255, 0.1);
+    border: none;
+    color: white;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    font-weight: bold;
+    transition: all 0.2s ease;
+    touch-action: manipulation;
+    user-select: none;
+}
+
+.pdf-btn:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+    transform: scale(1.1);
+}
+
+.pdf-btn:active {
+    transform: scale(0.95);
+}
+
+.pdf-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.pdf-btn:disabled:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    transform: none;
+}
+
+/* Close Button */
+.pdf-close {
+    background-color: rgba(255, 0, 0, 0.3);
+    font-size: 24px;
+    line-height: 1;
+}
+
+.pdf-close:hover {
+    background-color: rgba(255, 0, 0, 0.5);
+}
+
+/* Page Info */
+.pdf-page-info {
+    color: white;
+    font-size: 14px;
+    font-weight: 500;
+    padding: 0 8px;
+    min-width: 60px;
+    text-align: center;
+    user-select: none;
+}
+
+/* Loading Indicator */
+.pdf-loading {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    color: white;
+    font-size: 16px;
+}
+
+.pdf-loading.hidden {
+    display: none;
+}
+
+/* Loading Spinner */
+.pdf-spinner {
+    width: 48px;
+    height: 48px;
+    border: 4px solid rgba(255, 255, 255, 0.3);
+    border-top: 4px solid white;
+    border-radius: 50%;
+    animation: pdf-spin 1s linear infinite;
+}
+
+@keyframes pdf-spin {
+    0% {
+        transform: rotate(0deg);
+    }
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+/* Error Message */
+.pdf-error {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    color: white;
+    font-size: 16px;
+    text-align: center;
+    padding: 20px;
+}
+
+.pdf-error.hidden {
+    display: none;
+}
+
+.pdf-retry {
+    background-color: rgba(255, 255, 255, 0.2);
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.2s ease;
+}
+
+.pdf-retry:hover {
+    background-color: rgba(255, 255, 255, 0.3);
+}
+
+/* Mobile Optimizations */
+@media (max-width: 768px) {
+    .pdf-container {
+        padding: 0;
+        width: 100vw;
+        height: 100vh;
+        height: 100dvh; /* Dynamic viewport height for mobile */
+    }
+
+    .pdf-controls {
+        bottom: 10px;
+        padding: 8px 12px;
+        gap: 6px;
+        border-radius: 20px;
+    }
+
+    .pdf-btn {
+        width: 36px;
+        height: 36px;
+        font-size: 16px;
+    }
+
+    .pdf-close {
+        font-size: 20px;
+    }
+
+    .pdf-page-info {
+        font-size: 12px;
+        min-width: 50px;
+        padding: 0 6px;
+    }
+
+    .pdf-canvas {
+        margin: 0;
+        max-width: 100vw;
+        max-height: calc(100vh - 60px); /* Only account for controls */
+        max-height: calc(100dvh - 60px); /* Dynamic viewport height */
+        width: auto;
+        height: auto;
+    }
+
+    .pdf-loading {
+        font-size: 14px;
+    }
+
+    .pdf-spinner {
+        width: 40px;
+        height: 40px;
+        border-width: 3px;
+    }
+}
+
+/* Very small screens */
+@media (max-width: 480px) {
+    .pdf-controls {
+        bottom: 5px;
+        padding: 6px 8px;
+        gap: 4px;
+        border-radius: 16px;
+        flex-wrap: wrap;
+        max-width: 90%;
+    }
+
+    .pdf-btn {
+        width: 32px;
+        height: 32px;
+        font-size: 14px;
+    }
+
+    .pdf-close {
+        font-size: 18px;
+    }
+
+    .pdf-page-info {
+        font-size: 11px;
+        min-width: 40px;
+        padding: 0 4px;
+    }
+
+    .pdf-canvas {
+        margin: 5px;
+    }
+}
+
+/* Accessibility */
+@media (prefers-reduced-motion: reduce) {
+    .pdf-btn {
+        transition: none;
+    }
+
+    .pdf-spinner {
+        animation: none;
+    }
+}
+
+/* High contrast mode */
+@media (prefers-contrast: high) {
+    .pdf-controls {
+        background-color: black;
+        border: 2px solid white;
+    }
+
+    .pdf-btn {
+        background-color: white;
+        color: black;
+        border: 1px solid black;
+    }
+
+    .pdf-close {
+        background-color: red;
+        color: white;
+    }
+}
+
+/* Landscape orientation on mobile */
+@media (max-width: 768px) and (orientation: landscape) {
+    .pdf-controls {
+        bottom: 5px;
+        padding: 6px 10px;
+    }
+
+    .pdf-btn {
+        width: 32px;
+        height: 32px;
+        font-size: 14px;
+    }
+
+    .pdf-page-info {
+        font-size: 11px;
+    }
+}
+
+/* Hidden utility class */
+.hidden {
+    display: none !important;
+}
+
+/* iOS specific optimizations */
+@supports (-webkit-touch-callout: none) {
+    .pdf-overlay {
+        /* Fix for iOS viewport issues */
+        width: 100vw;
+        height: 100vh;
+        height: -webkit-fill-available;
+    }
+
+    .pdf-container {
+        width: 100vw;
+        height: 100vh;
+        height: -webkit-fill-available;
+        padding: 0;
+        margin: 0;
+    }
+
+    .pdf-canvas {
+        /* Full screen on iOS */
+        max-width: 100vw;
+        max-height: calc(100vh - 60px);
+        max-height: calc(-webkit-fill-available - 60px);
+        width: auto;
+        height: auto;
+        margin: 0;
+    }
+}
+
+/* Additional iOS optimizations for webkit */
+@media screen and (-webkit-min-device-pixel-ratio: 2) {
+    .pdf-canvas {
+        /* Higher quality rendering on Retina displays */
+        image-rendering: -webkit-optimize-contrast;
+        image-rendering: crisp-edges;
+    }
 }
