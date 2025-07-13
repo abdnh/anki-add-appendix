@@ -294,8 +294,12 @@ class PdfSelectorDialog(Dialog):
             f'<img src="{self.selected_pdf}" style="display: none;"></a>'
         )
 
-        self.editor.web.eval(
-            f"document.execCommand('insertHTML', false, {json.dumps(appendix_html)});"
+        mw.progress.single_shot(
+            100,
+            lambda: self.editor.web.eval(
+                "document.execCommand('insertHTML', "
+                f"false, {json.dumps(appendix_html)});"
+            ),
         )
 
         self.accept()
