@@ -208,11 +208,12 @@ class PdfSelectorDialog(Dialog):
             # Escape special regex characters in filename for safe regex matching
             escaped_old_name = re.escape(old_name)
 
-            # Search for notes containing href to the old PDF name
+            # Search for notes containing href or src to the old PDF name
             # with optional page parameter
             # Matches both: href="filename.pdf" and href="filename.pdf?page=123"
+            # Also matches: src="filename.pdf"
             search_pattern = (
-                rf'''"re:href=[\"']?{escaped_old_name}(\?page=\\d+)?[\"']?"'''
+                rf'''"re:(href|src)=[\"']?{escaped_old_name}(\?page=\\d+)?[\"']?"'''
             )
             note_ids = col.find_notes(search_pattern)
             updated_notes = []
@@ -226,7 +227,7 @@ class PdfSelectorDialog(Dialog):
                     # with optional page parameters
                     # Pattern matches: href="old_name" or href="old_name?page=123"
                     # (with single or double quotes)
-                    pattern = rf'href=(["\']){re.escape(old_name)}(\?page=\d+)?\1'
+                    href_pattern = rf'href=(["\']){re.escape(old_name)}(\?page=\d+)?\1'
 
                     def replace_href(match: Match[str]) -> str:
                         quote = match.group(1)  # Single or double quote
@@ -235,7 +236,18 @@ class PdfSelectorDialog(Dialog):
                         )  # Page parameter if present
                         return f"href={quote}{new_name}{page_param}{quote}"
 
-                    new_field = re.sub(pattern, replace_href, field)
+                    new_field = re.sub(href_pattern, replace_href, field)
+
+                    # Also update src attributes in img tags
+                    # Pattern matches: src="old_name" (with single or double quotes)
+                    src_pattern = rf'src=(["\']){re.escape(old_name)}\1'
+
+                    def replace_src(match: Match[str]) -> str:
+                        quote = match.group(1)  # Single or double quote
+                        return f"src={quote}{new_name}{quote}"
+
+                    new_field = re.sub(src_pattern, replace_src, new_field)
+
                     if new_field != field:
                         note.fields[i] = new_field
                         updated = True
