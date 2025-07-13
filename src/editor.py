@@ -1,6 +1,6 @@
 import json
 import re
-import urllib
+import urllib.parse
 from typing import Any, Callable
 
 from anki.hooks import wrap
@@ -42,9 +42,86 @@ def on_pdf_selector(editor: Editor) -> None:
     dialog.exec()
 
 
+def on_toggle_image_appendix(editor: Editor) -> None:
+    """Toggle between image reference and appendix reference."""
+    appendix_number = get_next_appendix_number(editor)
+    image_extensions = json.dumps(pics)
+    # JavaScript to get selected HTML and toggle it
+    js_code = f"""
+    (function() {{
+        const currentField = document.activeElement.shadowRoot;
+        const selection = currentField.getSelection();
+        if (!selection.rangeCount) return;
+
+        const range = selection.getRangeAt(0);
+        const clonedContents = range.cloneContents();
+        const div = document.createElement('div');
+        div.appendChild(clonedContents);
+        const selectedHtml = div.innerHTML;
+
+        if (!selectedHtml) return;
+
+        // Create a temporary element to parse HTML
+        const tempEl = document.createElement('div');
+        tempEl.innerHTML = selectedHtml;
+
+        // Check if it's an image reference
+        const imgTag = tempEl.querySelector('img');
+        if (imgTag && imgTag.src) {{
+            const src = imgTag.getAttribute('src');
+            const appendixHtml = `<a href="${{src}}" class="appendix-link">` +
+                                 `🔗Appendix {appendix_number}</a>`;
+            document.execCommand('insertHTML', false, appendixHtml);
+            return;
+        }}
+
+        // Check if it's an appendix reference
+        const aTag = tempEl.querySelector('a.appendix-link');
+        if (aTag && aTag.href) {{
+            const href = aTag.getAttribute('href');
+            // Check if it's an image file
+            const imageExtensions = {image_extensions};
+            if (href && imageExtensions.some(ext =>
+                href.toLowerCase().endsWith(`.${{ext}}`))) {{
+                const imgHtml = `<img src="${{href}}">`;
+                document.execCommand('insertHTML', false, imgHtml);
+                return;
+            }}
+        }}
+
+        // If neither image nor appendix reference, check if it's plain appendix text
+        const selectedText = selection.toString();
+        const appendixMatch = selectedText.match(/🔗Appendix (\\d+)/);
+        if (appendixMatch) {{
+            // Find the parent anchor element for this text
+            let currentNode = range.commonAncestorContainer;
+            while (currentNode && currentNode.nodeType !== 1) {{
+                currentNode = currentNode.parentNode;
+            }}
+
+            if (currentNode) {{
+                const parentAnchor = currentNode.closest('a.appendix-link');
+                if (parentAnchor && parentAnchor.href) {{
+                    const href = parentAnchor.getAttribute('href');
+                    const imageExtensions = {image_extensions};
+                    if (href && imageExtensions.some(ext =>
+                        href.toLowerCase().endsWith(`.${{ext}}`))) {{
+                        const imgHtml = `<img src="${{href}}">`;
+                        document.execCommand('insertHTML', false, imgHtml);
+                        return;
+                    }}
+                }}
+            }}
+        }}
+    }})();
+    """
+
+    editor.web.eval(js_code)
+
+
 def on_editor_did_init_buttons(buttons: list[str], editor: Editor) -> None:
     # PDF Selector button
-    pdf_selector_button = editor.addButton(
+    button = editor.addButton(
         icon=None,
         cmd="pdf_selector",
         func=on_pdf_selector,
@@ -52,7 +129,7 @@ def on_editor_did_init_buttons(buttons: list[str], editor: Editor) -> None:
         label="<span>📄</span>",
         id="pdf_selector",
     )
-    buttons.append(pdf_selector_button)
+    buttons.append(button)
 
     # Appendix mode toggle button
     label_style = 'style="color: red"' if appendix_mode_enabled else ""
@@ -67,6 +144,21 @@ def on_editor_did_init_buttons(buttons: list[str], editor: Editor) -> None:
         label=f"<span {label_style}>A</span>",
         id="toggle_appendix",
         keys=config["appendix_mode_shortcut"],
+    )
+    buttons.append(button)
+
+    # Toggle image appendix button
+    tip = "Toggle Image Appendix"
+    if config["toggle_image_appendix_shortcut"]:
+        tip += f" ({config['toggle_image_appendix_shortcut']})"
+    button = editor.addButton(
+        icon=None,
+        cmd="toggle_image_appendix",
+        func=on_toggle_image_appendix,
+        tip=tip,
+        label="<span>🖼️</span>",
+        id="toggle_image_appendix",
+        keys=config["toggle_image_appendix_shortcut"],
     )
     buttons.append(button)
 
@@ -112,9 +204,10 @@ def url_to_link(*args: Any, **kwargs: Any) -> str:
     _old: Callable = kwargs.pop("_old")
 
     if appendix_mode_enabled and url.lower().endswith(".pdf"):
-        return self.fnameToLink(self._retrieveURL(url))
-    else:
-        return _old(*args, **kwargs)
+        retrieved_url = self._retrieveURL(url)
+        if retrieved_url:
+            return self.fnameToLink(retrieved_url)
+    return _old(*args, **kwargs)
 
 
 def init_hooks() -> None:

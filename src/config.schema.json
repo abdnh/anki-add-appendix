@@ -1,7 +1,13 @@
 {
     "properties": {
+        "appendix_mode_shortcut": {
+            "type": "string"
+        },
         "report_errors": {
             "type": "boolean"
+        },
+        "toggle_image_appendix_shortcut": {
+            "type": "string"
         }
     },
     "type": "object"
