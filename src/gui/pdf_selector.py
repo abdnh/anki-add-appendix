@@ -210,9 +210,9 @@ class PdfSelectorDialog(Dialog):
 
             # Search for notes containing href to the old PDF name
             # with optional page parameter
-            # Matches both: href="filename.pdf" and href="filename.pdf#page=123"
+            # Matches both: href="filename.pdf" and href="filename.pdf?page=123"
             search_pattern = (
-                rf'''"re:href=[\"']?{escaped_old_name}(#page=\\d+)?[\"']?"'''
+                rf'''"re:href=[\"']?{escaped_old_name}(\?page=\\d+)?[\"']?"'''
             )
             note_ids = col.find_notes(search_pattern)
             updated_notes = []
@@ -224,9 +224,9 @@ class PdfSelectorDialog(Dialog):
                 for i, field in enumerate(note.fields):
                     # Use regex to find and replace href references
                     # with optional page parameters
-                    # Pattern matches: href="old_name" or href="old_name#page=123"
+                    # Pattern matches: href="old_name" or href="old_name?page=123"
                     # (with single or double quotes)
-                    pattern = rf'href=(["\']){re.escape(old_name)}(#page=\d+)?\1'
+                    pattern = rf'href=(["\']){re.escape(old_name)}(\?page=\d+)?\1'
 
                     def replace_href(match: Match[str]) -> str:
                         quote = match.group(1)  # Single or double quote
@@ -275,7 +275,7 @@ class PdfSelectorDialog(Dialog):
             link_text = f"🔗Appendix {appendix_number} (p.{page_number})"
         else:
             link_text = f"🔗Appendix {appendix_number}"
-        href = self.selected_pdf + (f"#page={page_number}" if page_number > 0 else "")
+        href = self.selected_pdf + (f"?page={page_number}" if page_number > 0 else "")
         appendix_html = (
             f'<a href="{href}" class="appendix-link">'
             f"{link_text}"
