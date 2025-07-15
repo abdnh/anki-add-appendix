@@ -1,6 +1,24 @@
 # Add Appendix
 
-TODO
+This Anki add-on allows you to insert image/PDF links in the editor with numbered link references as follows:
+
+```html
+<a href="example.png">🔗Appendix 1</a>
+```
+
+and
+
+```html
+<a href="example.pdf">🔗Appendix 1</a>
+```
+
+Image links open in your default web browser, while PDF links open in a viewer inside Anki.
+
+The add-on has the following editor buttons:
+
+- **Toggle Appendix Mode**: This button enables reference conversion when pasting/dropping links to supported formats.
+- **Toggle Image Appendix**: This button converts a selected image (`<img>` element) to an appendix link or vice versa.
+- **PDF Selector**: This button allows you to manage PDF files in your media folder and inserts references.
 
 ## Changelog
 
