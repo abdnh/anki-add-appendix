@@ -1,6 +1,6 @@
 {
     "homepage": "https://github.com/abdnh/anki-add-appendix",
-    "min_point_version": 45,
+    "min_point_version": 50,
     "name": "Add Appendix",
     "package": "add_appendix"
 }
