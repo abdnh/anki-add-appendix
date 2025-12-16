@@ -70,7 +70,8 @@ def on_toggle_image_appendix(editor: Editor) -> None:
         if (imgTag && imgTag.src) {{
             const src = imgTag.getAttribute('src');
             const appendixHtml = `<a href="${{src}}" class="appendix-link">` +
-                                 `🔗Appendix {appendix_number}</a>`;
+                                 `🔗Appendix {appendix_number}<img src="${{src}}"`+
+                                  ' style="display: none;"></a>';
             document.execCommand('insertHTML', false, appendixHtml);
             return;
         }}
